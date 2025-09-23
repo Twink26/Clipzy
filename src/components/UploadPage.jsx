@@ -46,10 +46,10 @@ const UploadPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4">
       {/* Welcome Message */}
       <div className="text-center mb-12">
-        <h1 className="text-6xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+        <h1 className="text-6xl font-bold text-shadow-black font-serif text-shadow-2xs text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Welcome to Clipzy
         </h1>
         <p className="text-gray-300 text-xl">Paste your video URL to get started</p>
