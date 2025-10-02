@@ -10,7 +10,7 @@ const UploadPage = () => {
     const files = e.target.files
     if (files.length > 0) {
       setSelectedFile(files[0])
-      setVideoUrl('') // Clear URL when file is selected
+      setVideoUrl('') 
     }
   }
 

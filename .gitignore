@@ -5,3 +5,6 @@ package.json
 postcss.config.js
 vite.config.js
 tailwind.config.js
+node-backend/node_modules
+node-backend/package-lock.json
+node-backend/package.json
