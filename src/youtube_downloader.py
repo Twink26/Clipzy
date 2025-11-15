@@ -17,6 +17,7 @@ class YouTubeDownloader:
     def __init__(self, output_dir: str = "data/downloads"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.download_progress_callback = None
     
     def download_video(self, url: str, audio_only: bool = False) -> Dict[str, any]:
         """
@@ -34,7 +35,21 @@ class YouTubeDownloader:
             ydl_opts = {
                 'outtmpl': str(self.output_dir / '%(title)s.%(ext)s'),
                 'format': 'bestaudio/best' if audio_only else 'best',
+                'quiet': False,
+                'no_warnings': False,
             }
+            
+            # Add progress hook if callback provided
+            if self.download_progress_callback:
+                def progress_hook(d):
+                    if d['status'] == 'downloading':
+                        if 'total_bytes' in d:
+                            percent = (d['downloaded_bytes'] / d['total_bytes']) * 100
+                            self.download_progress_callback(percent)
+                    elif d['status'] == 'finished':
+                        self.download_progress_callback(100.0)
+                
+                ydl_opts['progress_hooks'] = [progress_hook]
             
             if audio_only:
                 ydl_opts['postprocessors'] = [{
