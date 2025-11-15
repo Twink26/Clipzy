@@ -1,10 +1,74 @@
-node_modules
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
 .env
-package-lock.json
-package.json
-postcss.config.js
-vite.config.js
-tailwind.config.js
-node-backend/node_modules
-node-backend/package-lock.json
-node-backend/package.json
+.env.local
+
+# Data directories
+data/downloads/
+data/raw/*.csv
+data/processed/*.csv
+data/models/*.pkl
+data/models/*.joblib
+
+# Output
+output/
+*.mp4
+*.mp3
+*.wav
+*.avi
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp-*
+*.tmp
+
+# Model files (large)
+*.pt
+*.pth
+*.h5
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
