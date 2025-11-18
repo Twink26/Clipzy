@@ -21,6 +21,31 @@ class Transcriber:
         Args:
             model_name: Whisper model size (tiny, base, small, medium, large)
         """
+        # ---------------------------------------
+        # FIX: Inject FFmpeg paths (important!)
+        # ---------------------------------------
+        import os
+
+        ffmpeg_path = os.getenv("FFMPEG_PATH")
+        ffprobe_path = os.getenv("FFPROBE_PATH")
+
+        if ffmpeg_path and os.path.exists(ffmpeg_path):
+            ffmpeg_dir = os.path.dirname(ffmpeg_path)
+            os.environ["PATH"] = ffmpeg_dir + os.pathsep + os.environ.get("PATH", "")
+            logger.info(f"FFmpeg found and added to PATH: {ffmpeg_path}")
+        else:
+            logger.warning("FFMPEG_PATH not set or invalid — Whisper may fail.")
+
+        if ffprobe_path and os.path.exists(ffprobe_path):
+            ffprobe_dir = os.path.dirname(ffprobe_path)
+            os.environ["PATH"] = ffprobe_dir + os.pathsep + os.environ.get("PATH", "")
+            logger.info(f"FFprobe found and added to PATH: {ffprobe_path}")
+        else:
+            logger.warning("FFPROBE_PATH not set or invalid — Whisper may fail.")
+
+        # ---------------------------------------
+        # Load Whisper Model (after FFmpeg patch)
+        # ---------------------------------------
         logger.info(f"Loading Whisper model: {model_name}")
         self.model = whisper.load_model(model_name)
         logger.info("Model loaded successfully")
@@ -183,4 +208,3 @@ class Transcriber:
         secs = int(seconds % 60)
         millis = int((seconds % 1) * 1000)
         return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
-
