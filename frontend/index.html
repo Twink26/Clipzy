@@ -101,23 +101,130 @@
       list-style: none;
     }
 
+    .reel-list {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
     .reel-item {
-      padding: 14px;
-      margin-bottom: 12px;
-      border-radius: 12px;
+      padding: 16px;
+      border-radius: 16px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .reel-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 216, 255, 0.2);
+    }
+
+    .reel-video {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: #000;
+      max-height: 400px;
+    }
+
+    .reel-info {
+      margin-bottom: 12px;
+    }
+
+    .reel-item h3 {
+      margin: 0 0 8px 0;
+      font-size: 1rem;
+      color: #fff;
+      word-break: break-word;
     }
 
     .reel-item small {
       display: block;
       color: #95a7d6;
-      margin-top: 6px;
+      margin-top: 4px;
+      font-size: 0.85rem;
     }
 
-    .reel-item a {
+    .reel-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s ease;
+      flex: 1;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, #00d8ff, #6c54ff);
+      color: #0b0f15;
+      font-weight: bold;
+    }
+
+    .btn-download:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 216, 255, 0.3);
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #00d8ff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status.loading {
+      display: flex;
+      align-items: center;
+    }
+
+    .error {
+      background: rgba(255, 59, 48, 0.1);
+      border: 1px solid rgba(255, 59, 48, 0.3);
+      color: #ff6b6b;
+    }
+
+    .success {
+      background: rgba(52, 199, 89, 0.1);
+      border: 1px solid rgba(52, 199, 89, 0.3);
+      color: #4ade80;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .viral-score {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(0, 216, 255, 0.2);
       color: #00d8ff;
-      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.85rem;
     }
   </style>
 </head>
@@ -149,7 +256,7 @@
     </form>
 
     <div id="status" class="status">Ready.</div>
-    <ul id="reels" class="reel-list"></ul>
+    <div id="reels" class="reel-list"></div>
   </div>
 
   <script>
@@ -157,38 +264,96 @@
     const form = document.getElementById("reelForm");
     const statusBox = document.getElementById("status");
     const reelsList = document.getElementById("reels");
+    const submitButton = form.querySelector('button[type="submit"]');
 
-    function setStatus(message) {
+    function setStatus(message, type = "info") {
       statusBox.textContent = message;
+      statusBox.className = "status";
+      if (type === "loading") {
+        statusBox.className += " loading";
+        statusBox.innerHTML = `<span class="loading"></span>${message}`;
+      } else if (type === "error") {
+        statusBox.className += " error";
+      } else if (type === "success") {
+        statusBox.className += " success";
+      }
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     }
 
     function renderReels(reels, outputDir) {
       reelsList.innerHTML = "";
-      reels.forEach((reel) => {
-        const item = document.createElement("li");
+      
+      if (reels.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "reel-item";
+        empty.innerHTML = "<p>No reels generated.</p>";
+        reelsList.appendChild(empty);
+        return;
+      }
+
+      reels.forEach((reel, index) => {
+        const item = document.createElement("div");
         item.className = "reel-item";
-        const filename = reel.reel_path.split(/[/\\]/).pop();
+        
+        const videoUrl = `${API_BASE}${reel.reel_url}`;
+        const downloadUrl = `${API_BASE}${reel.reel_url}?download=true`;
+        
         item.innerHTML = `
-          <strong>${filename}</strong>
-          <small>Duration: ${reel.duration.toFixed(1)}s &nbsp; | &nbsp; Score: ${reel.viral_score.toFixed(2)}</small>
-          <small>Preview: ${reel.preview_text}</small>
-          <small>Location: ${reel.reel_path}</small>
+          <div class="reel-info">
+            <h3>Clip ${index + 1}: ${reel.filename}</h3>
+            <video class="reel-video" controls preload="metadata">
+              <source src="${videoUrl}" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <small>
+              <span class="viral-score">Score: ${reel.viral_score.toFixed(2)}</span>
+              &nbsp;•&nbsp;
+              Duration: ${formatTime(reel.duration)}
+              &nbsp;•&nbsp;
+              Time: ${reel.start_time.toFixed(1)}s - ${reel.end_time.toFixed(1)}s
+            </small>
+            <small style="margin-top: 8px; display: block; color: #a9b3ce;">
+              ${reel.preview_text}
+            </small>
+          </div>
+          <div class="reel-actions">
+            <a href="${downloadUrl}" download="${reel.filename}" class="btn-secondary btn-download" style="text-decoration: none; text-align: center;">
+              Download
+            </a>
+            <button class="btn-secondary" onclick="copyToClipboard('${videoUrl}', this)">
+              Copy Link
+            </button>
+          </div>
         `;
         reelsList.appendChild(item);
       });
+    }
 
-      if (reels.length > 0) {
-        const info = document.createElement("li");
-        info.className = "reel-item";
-        info.innerHTML = `Output directory: <strong>${outputDir}</strong>`;
-        reelsList.appendChild(info);
-      }
+    function copyToClipboard(text, button) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = "Copied!";
+        button.style.background = "rgba(52, 199, 89, 0.3)";
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = "";
+        }, 2000);
+      }).catch(err => {
+        console.error("Failed to copy:", err);
+        alert("Failed to copy to clipboard");
+      });
     }
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       reelsList.innerHTML = "";
-      setStatus("Processing... this can take a few minutes for long podcasts.");
+      submitButton.disabled = true;
+      setStatus("Processing... this can take a few minutes for long podcasts.", "loading");
 
       const payload = {
         youtube_url: document.getElementById("youtubeUrl").value.trim(),
@@ -211,11 +376,13 @@
         }
 
         const data = await response.json();
-        setStatus(`Success! Generated ${data.count} reels.`);
+        setStatus(`Success! Generated ${data.count} reels.`, "success");
         renderReels(data.reels, data.output_dir);
       } catch (error) {
         console.error(error);
-        setStatus(`Error: ${error.message}`);
+        setStatus(`Error: ${error.message}`, "error");
+      } finally {
+        submitButton.disabled = false;
       }
     });
   </script>
