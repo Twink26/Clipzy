@@ -7,9 +7,10 @@ An intelligent application that automatically identifies viral-worthy segments f
 - 🎥 **YouTube Video Processing**: Download and process YouTube podcast videos
 - 🎤 **Automatic Transcription**: Convert speech to text with timestamps
 - 🤖 **AI-Powered Detection**: Identify interesting/viral segments using NLP
-- ✂️ **Smart Video Editing**: Automatically trim and create reels
+- ✂️ **Smart Video Editing**: Automatically trim and create reels with branding
 - 📝 **Caption Generation**: Auto-generate and overlay captions
 - 📊 **Dataset Processing**: Train models on viral content datasets
+- 🌐 **Web Interface**: FastAPI backend + lightweight frontend for self-serve reels
 
 ## Installation
 
@@ -44,6 +45,10 @@ python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk
 
 ```
 clipzy/
+├── backend/
+│   └── app.py                     # FastAPI service (Phase 6)
+├── frontend/
+│   └── index.html                 # Lightweight UI (Phase 6)
 ├── src/
 │   ├── __init__.py
 │   ├── youtube_downloader.py      # YouTube video download
@@ -58,7 +63,12 @@ clipzy/
 │   └── models/                     # Saved models
 ├── output/                         # Generated reels
 ├── config.py                       # Configuration
-├── main.py                         # Entry point
+├── main.py                         # CLI entry point
+├── collect_dataset.py              # Interactive dataset helper
+├── process_dataset.py              # Dataset processing pipeline
+├── train_model.py                  # Model training helper
+├── test_phase2.py                  # Phase 2 validation script
+├── test_phase5_video_editor.py     # Phase 5 validation script
 ├── requirements.txt
 └── README.md
 ```
@@ -85,13 +95,37 @@ reels = generator.generate_reels(
 python main.py --url "https://www.youtube.com/watch?v=VIDEO_ID" --segments 5
 ```
 
+### Web API (Phase 6)
+
+1. **Start the API server**
+   ```bash
+   uvicorn backend.app:app --reload --port 8000
+   ```
+
+2. **Open the frontend**
+   - Option A: Double-click `frontend/index.html`
+   - Option B: Serve it locally:
+     ```bash
+     cd frontend
+     python -m http.server 5173
+     ```
+     Then visit `http://localhost:5173`
+
+3. **Use the UI**
+   - Paste a YouTube link
+   - Set segment/min/max duration
+   - Click **Generate Reels**
+   - The UI calls `POST /generate` and displays saved reel paths
+
+> Tip: If your backend runs on a different host/port, set `window.CLIPZY_API_BASE` in the browser console before submitting the form.
+
 ## Dataset Processing
 
 The project requires dataset processing for training the NLP model:
 
-1. **Prepare Dataset**: Place your dataset in `data/raw/`
-2. **Process Dataset**: Run `python src/dataset_processor.py`
-3. **Train Model**: The model will be trained automatically on first run
+1. **Collect Dataset**: `python collect_dataset.py --interactive`
+2. **Process Dataset**: `python process_dataset.py`
+3. **Train Model**: `python train_model.py`
 
 ## Configuration
 

@@ -5,9 +5,8 @@ Handles video trimming, resizing, and caption overlay for reel generation
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import logging
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, ImageClip
 from moviepy.video.fx import resize
-import numpy as np
 
 import config
 
@@ -227,6 +226,87 @@ class VideoEditor:
         except Exception as e:
             logger.error(f"Error adding captions: {str(e)}")
             raise
+
+    def apply_branding_overlay(self, video_path: str, output_path: str = None) -> str:
+        """
+        Apply branding (text or image watermark) to video.
+        """
+        if not config.BRANDING_ENABLED:
+            logger.info("Branding disabled; skipping overlay.")
+            return video_path
+
+        if output_path is None:
+            output_path = video_path
+
+        try:
+            video = VideoFileClip(video_path)
+            clips = [video]
+
+            # Determine position
+            pos = config.BRANDING_POSITION.lower()
+            alignment_map = {
+                "top-left": ("left", "top"),
+                "top-right": ("right", "top"),
+                "bottom-left": ("left", "bottom"),
+                "bottom-right": ("right", "bottom"),
+            }
+            position = alignment_map.get(pos, ("right", "top"))
+
+            # Branding image
+            branding_image = config.BRANDING_IMAGE_PATH
+            if branding_image:
+                image_path = Path(branding_image)
+                if image_path.exists():
+                    logo_clip = (
+                        ImageClip(str(image_path))
+                        .set_duration(video.duration)
+                        .resize(width=min(200, int(video.w * 0.2)))
+                        .set_position(position)
+                        .set_opacity(config.BRANDING_OPACITY)
+                    )
+                    clips.append(logo_clip)
+                else:
+                    logger.warning(f"Branding image not found: {branding_image}")
+
+            # Branding text
+            branding_text = config.BRANDING_TEXT.strip()
+            if branding_text:
+                text_clip = (
+                    TextClip(
+                        branding_text,
+                        fontsize=config.BRANDING_TEXT_SIZE,
+                        color=config.BRANDING_TEXT_COLOR,
+                        font="Arial-Bold",
+                        method="caption",
+                    )
+                    .set_duration(video.duration)
+                    .set_position(position)
+                    .set_opacity(config.BRANDING_OPACITY)
+                )
+                clips.append(text_clip)
+
+            final_video = CompositeVideoClip(clips)
+            final_video.write_videofile(
+                output_path,
+                codec="libx264",
+                audio_codec="aac",
+                temp_audiofile="temp-audio.m4a",
+                remove_temp=True,
+                verbose=False,
+                logger=None,
+            )
+
+            final_video.close()
+            video.close()
+            for clip in clips[1:]:
+                clip.close()
+
+            logger.info(f"Branding overlay applied: {output_path}")
+            return output_path
+
+        except Exception as e:
+            logger.error(f"Error applying branding overlay: {str(e)}")
+            raise
     
     def create_reel(self, video_path: str, start_time: float, end_time: float,
                    captions: List[Dict] = None, output_path: str = None) -> str:
@@ -260,8 +340,17 @@ class VideoEditor:
             # Step 2: Resize to reel format
             temp_resized = str(Path(output_path).parent / f"temp_resized_{start_time}.mp4")
             self.resize_to_reel(temp_trimmed, temp_resized)
+
+            working_path = temp_resized
+
+            # Step 3: Apply branding if enabled
+            temp_branded = None
+            if config.BRANDING_ENABLED:
+                temp_branded = str(Path(output_path).parent / f"temp_branded_{start_time}.mp4")
+                working_path = self.apply_branding_overlay(temp_resized, temp_branded)
+                Path(temp_resized).unlink(missing_ok=True)
             
-            # Step 3: Add captions if provided
+            # Step 4: Add captions if provided
             if captions:
                 # Adjust caption timestamps relative to start_time
                 adjusted_captions = []
@@ -274,15 +363,20 @@ class VideoEditor:
                     adj_caption['end'] = min(end_time - start_time, adj_caption['end'])
                     adjusted_captions.append(adj_caption)
                 
-                self.add_captions(temp_resized, adjusted_captions, output_path)
+                self.add_captions(working_path, adjusted_captions, output_path)
                 
                 # Clean up temp files
                 Path(temp_trimmed).unlink(missing_ok=True)
-                Path(temp_resized).unlink(missing_ok=True)
+                if working_path != output_path:
+                    Path(working_path).unlink(missing_ok=True)
+                if temp_branded:
+                    Path(temp_branded).unlink(missing_ok=True)
             else:
                 # No captions, just rename resized file
-                Path(temp_resized).rename(output_path)
+                Path(working_path).rename(output_path)
                 Path(temp_trimmed).unlink(missing_ok=True)
+                if temp_branded:
+                    Path(temp_branded).unlink(missing_ok=True)
             
             logger.info(f"Reel created successfully: {output_path}")
             return output_path
@@ -292,5 +386,7 @@ class VideoEditor:
             # Clean up temp files on error
             Path(temp_trimmed).unlink(missing_ok=True)
             Path(temp_resized).unlink(missing_ok=True)
+            if 'temp_branded' in locals() and temp_branded:
+                Path(temp_branded).unlink(missing_ok=True)
             raise
 

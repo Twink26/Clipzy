@@ -44,6 +44,15 @@ CAPTION_COLOR = os.getenv("CAPTION_COLOR", "white")
 CAPTION_BACKGROUND = os.getenv("CAPTION_BACKGROUND", "black")
 CAPTION_POSITION = os.getenv("CAPTION_POSITION", "bottom")  # top, center, bottom
 
+# Branding / watermark settings
+BRANDING_ENABLED = os.getenv("BRANDING_ENABLED", "False").lower() == "true"
+BRANDING_TEXT = os.getenv("BRANDING_TEXT", "")
+BRANDING_TEXT_COLOR = os.getenv("BRANDING_TEXT_COLOR", "#FFFFFF")
+BRANDING_TEXT_SIZE = int(os.getenv("BRANDING_TEXT_SIZE", 40))
+BRANDING_IMAGE_PATH = os.getenv("BRANDING_IMAGE_PATH", "")
+BRANDING_POSITION = os.getenv("BRANDING_POSITION", "top-right")  # top-left, top-right, bottom-left, bottom-right
+BRANDING_OPACITY = float(os.getenv("BRANDING_OPACITY", 0.85))
+
 # YouTube settings
 DOWNLOAD_AUDIO_ONLY = os.getenv("DOWNLOAD_AUDIO_ONLY", "False").lower() == "true"
 VIDEO_QUALITY = os.getenv("VIDEO_QUALITY", "best")

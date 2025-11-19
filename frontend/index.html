@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clipzy – Generate Reels</title>
+  <style>
+    :root {
+      font-family: Arial, sans-serif;
+      color: #f4f4f4;
+      background-color: #0c0f17;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0c0f17, #1d2436);
+    }
+
+    .container {
+      width: min(600px, 90vw);
+      margin: 40px auto;
+      padding: 32px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 2rem;
+    }
+
+    p.description {
+      text-align: center;
+      color: #a9b3ce;
+      margin-bottom: 32px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #c9d4f5;
+      font-size: 0.95rem;
+    }
+
+    input,
+    button {
+      width: 100%;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+    }
+
+    input {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid transparent;
+      transition: border 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #00d8ff;
+    }
+
+    button {
+      background: linear-gradient(135deg, #00d8ff, #6c54ff);
+      color: #0b0f15;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(0, 216, 255, 0.3);
+    }
+
+    .status {
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      min-height: 60px;
+      color: #dbe3ff;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+    }
+
+    .reel-list {
+      margin-top: 20px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .reel-item {
+      padding: 14px;
+      margin-bottom: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .reel-item small {
+      display: block;
+      color: #95a7d6;
+      margin-top: 6px;
+    }
+
+    .reel-item a {
+      color: #00d8ff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Clipzy</h1>
+    <p class="description">Drop a YouTube podcast link and let AI create viral-ready reels.</p>
+
+    <form id="reelForm">
+      <label for="youtubeUrl">YouTube URL</label>
+      <input type="url" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+
+      <label for="segments">Number of segments</label>
+      <input type="number" id="segments" min="1" max="10" value="3">
+
+      <label for="minDuration">Min duration (seconds)</label>
+      <input type="number" id="minDuration" min="5" max="120" value="15">
+
+      <label for="maxDuration">Max duration (seconds)</label>
+      <input type="number" id="maxDuration" min="10" max="300" value="60">
+
+      <div style="display:flex; align-items:center; gap:8px; margin-top:4px; margin-bottom:12px;">
+        <input type="checkbox" id="captions" checked style="width:auto;margin:0;">
+        <label for="captions" style="margin:0;">Add captions</label>
+      </div>
+
+      <button type="submit">Generate Reels</button>
+    </form>
+
+    <div id="status" class="status">Ready.</div>
+    <ul id="reels" class="reel-list"></ul>
+  </div>
+
+  <script>
+    const API_BASE = window.CLIPZY_API_BASE || "http://localhost:8000";
+    const form = document.getElementById("reelForm");
+    const statusBox = document.getElementById("status");
+    const reelsList = document.getElementById("reels");
+
+    function setStatus(message) {
+      statusBox.textContent = message;
+    }
+
+    function renderReels(reels, outputDir) {
+      reelsList.innerHTML = "";
+      reels.forEach((reel) => {
+        const item = document.createElement("li");
+        item.className = "reel-item";
+        const filename = reel.reel_path.split(/[/\\]/).pop();
+        item.innerHTML = `
+          <strong>${filename}</strong>
+          <small>Duration: ${reel.duration.toFixed(1)}s &nbsp; | &nbsp; Score: ${reel.viral_score.toFixed(2)}</small>
+          <small>Preview: ${reel.preview_text}</small>
+          <small>Location: ${reel.reel_path}</small>
+        `;
+        reelsList.appendChild(item);
+      });
+
+      if (reels.length > 0) {
+        const info = document.createElement("li");
+        info.className = "reel-item";
+        info.innerHTML = `Output directory: <strong>${outputDir}</strong>`;
+        reelsList.appendChild(info);
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      reelsList.innerHTML = "";
+      setStatus("Processing... this can take a few minutes for long podcasts.");
+
+      const payload = {
+        youtube_url: document.getElementById("youtubeUrl").value.trim(),
+        num_segments: Number(document.getElementById("segments").value),
+        min_duration: Number(document.getElementById("minDuration").value),
+        max_duration: Number(document.getElementById("maxDuration").value),
+        add_captions: document.getElementById("captions").checked,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to generate reels.");
+        }
+
+        const data = await response.json();
+        setStatus(`Success! Generated ${data.count} reels.`);
+        renderReels(data.reels, data.output_dir);
+      } catch (error) {
+        console.error(error);
+        setStatus(`Error: ${error.message}`);
+      }
+    });
+  </script>
+</body>
+
+</html>
+
